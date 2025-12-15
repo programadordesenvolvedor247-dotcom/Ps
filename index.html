@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Usuários em Tempo Real</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f2f2f2;margin:0;padding:0}
+    .wrap{max-width:900px;margin:20px auto;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:20px}
+    h2{margin-top:0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    input,button{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:1px solid #ccc}
+    button{background:#007bff;color:#fff;border:none;cursor:pointer}
+    button:hover{opacity:.9}
+    ul{list-style:none;padding:0}
+    li{padding:10px;border-bottom:1px solid #eee}
+    .small{color:#666;font-size:12px}
+    @media(max-width:700px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>Painel de Cadastro / Login</h2>
+    <div class="grid">
+      <div>
+        <h3>Criar Usuário</h3>
+        <input id="cadUser" placeholder="Usuário" />
+        <input id="cadPass" type="password" placeholder="Senha" />
+        <button onclick="criarUsuario()">Cadastrar</button>
+        <p class="small">Usuários criados aqui aparecem em tempo real para todos.</p>
+      </div>
+      <div>
+        <h3>Login</h3>
+        <input id="loginUser" placeholder="Usuário" />
+        <input id="loginPass" type="password" placeholder="Senha" />
+        <button onclick="login()">Entrar</button>
+        <p id="loginStatus" class="small"></p>
+      </div>
+    </div>
+
+    <hr />
+    <h3>Usuários Cadastrados (Tempo Real)</h3>
+    <ul id="lista"></ul>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // 🔥 CONFIGURE SEU FIREBASE AQUI
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_PROJETO.firebaseapp.com",
+      projectId: "SEU_PROJECT_ID",
+      storageBucket: "SEU_PROJETO.appspot.com",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Criar usuário
+    async function criarUsuario(){
+      const user = cadUser.value.trim();
+      const pass = cadPass.value.trim();
+      if(!user || !pass) return alert('Preencha tudo');
+
+      await db.collection('usuarios').add({
+        usuario: user,
+        senha: pass,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      cadUser.value='';
+      cadPass.value='';
+    }
+
+    // Login simples (exemplo)
+    async function login(){
+      const user = loginUser.value.trim();
+      const pass = loginPass.value.trim();
+      const q = await db.collection('usuarios')
+        .where('usuario','==',user)
+        .where('senha','==',pass)
+        .get();
+
+      loginStatus.innerText = q.empty ? 'Login inválido' : 'Login OK';
+    }
+
+    // 🔴 TEMPO REAL: todos veem os mesmos usuários
+    db.collection('usuarios').orderBy('criadoEm','desc')
+      .onSnapshot((snap)=>{
+        lista.innerHTML='';
+        snap.forEach(doc=>{
+          const d = doc.data();
+          const li = document.createElement('li');
+          li.innerHTML = `<b>${d.usuario}</b><br><span class="small">Criado agora</span>`;
+          lista.appendChild(li);
+        });
+      });
+  </script>
+</body>
+</html>
